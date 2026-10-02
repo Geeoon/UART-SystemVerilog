@@ -5,6 +5,7 @@
  * @param CLOCK_SPEED       the speed of the clk signal in Hz
  * @param BAUD_RATE         the UART baud rate
  * @param DATA_BITS         the number of data bits in the frame
+ * @param STOP_BITS         the number of stop bits in the frame
  * @param[in] clk           the clock driving the sequential logic
  * @param[in] rst           reset signal
  * @param[in] uart_rx       the current UART receive input
