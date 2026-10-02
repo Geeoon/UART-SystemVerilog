@@ -3,7 +3,6 @@
  * @author Geeoon Chung
  * @brief detects the start of a UART frame. it's basically a wrapper for a timer
  * @param CLOCK_SPEED       the speed of the clk signal in Hz
- * @param OVERSAMPLING_RATE the number of samples per symbol
  * @param BAUD_RATE         the UART baud rate
  * @param[in] clk           the clock driving the sequential logic
  * @param[in] val           the current UART RX line value
@@ -11,10 +10,9 @@
  */
 module start_detector #(
     parameter int CLOCK_SPEED,  // in Hz
-    parameter int OVERSAMPLING_RATE=16,
     parameter int BAUD_RATE=115200,
     
-    localparam int CLOCKS_PER_SAMPLE=8*CLOCK_SPEED/(BAUD_RATE * OVERSAMPLING_RATE),
+    localparam int CLOCKS_PER_SAMPLE=CLOCK_SPEED/(BAUD_RATE*2),
     localparam int HISTORY_LENGTH=$clog2(OVERSAMPLING_RATE)
 )(
     input logic clk,
