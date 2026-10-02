@@ -9,6 +9,7 @@ module uart_tx_fifo_tb #(
     parameter int BAUD_RATE=115200,
     parameter int DATA_BITS=8,
     parameter int FIFO_SIZE=8,
+    parameter int STOP_BITS=1,
 
     localparam int OVERSAMPLING=6
 ) ();
@@ -26,7 +27,8 @@ module uart_tx_fifo_tb #(
         .CLOCK_SPEED(BAUD_RATE*OVERSAMPLING),
         .BAUD_RATE(BAUD_RATE),
         .DATA_BITS(DATA_BITS),
-        .FIFO_SIZE(FIFO_SIZE)
+        .FIFO_SIZE(FIFO_SIZE),
+        .STOP_BITS(STOP_BITS)
     ) dut (
         .clk,
         .rst,
@@ -69,129 +71,72 @@ module uart_tx_fifo_tb #(
         write = 1;
         data = '0;
         @(posedge clk); #5;
+        write = 0;
         assert(~full);
         @(posedge clk); #5;
+        // start bit
         repeat(OVERSAMPLING) begin
             assert(~full);
             assert(~uart_tx);
             @(posedge clk); #5;
         end
+        // data bits
+        repeat (DATA_BITS) begin
+            repeat(OVERSAMPLING) begin
+                assert(~full);
+                assert(~uart_tx);
+                @(posedge clk); #5;
+            end
+        end
+        // stop bits
+        repeat (STOP_BITS) begin
+            repeat(OVERSAMPLING) begin
+                assert(~full);
+                assert(uart_tx);
+                @(posedge clk); #5;
+            end
+        end
 
-        // // frame added to FIFO
-        // @(negedge empty); #5;
-        // assert(out == 0);
+        $display(" -- Single Pre-defined '1 Frame -- ");
+        write = 1;
+        data = '1;
+        @(posedge clk); #5;
+        write = 0;
+        assert(~full);
+        @(posedge clk); #5;
+        // start bit
+        repeat(OVERSAMPLING) begin
+            assert(~full);
+            assert(~uart_tx);
+            @(posedge clk); #5;
+        end
+        // data bits
+        repeat (DATA_BITS) begin
+            repeat(OVERSAMPLING) begin
+                assert(~full);
+                assert(uart_tx);
+                @(posedge clk); #5;
+            end
+        end
+        // stop bits
+        repeat (STOP_BITS) begin
+            repeat(OVERSAMPLING) begin
+                assert(~full);
+                assert(uart_tx);
+                @(posedge clk); #5;
+            end
+        end
 
-        // // read from FIFO
-        // read = 1;
-        // @(posedge clk) #5;
-        // read = 0;
-        // assert(empty);
-
-        // $display(" -- Sinlge Pre-defined '1 Frame -- ");
-        // uart_rx = 0;  // start bit
-        // repeat(OVERSAMPLING) begin
-        //     @(posedge clk); #5;
-        // end
-        // uart_rx = 1;  // data bits
-        // repeat(DATA_BITS) begin
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        // end
-        // uart_rx = 1;  // stop bit
-
-        // // frame added to FIFO
-        // @(negedge empty); #5;
-        // assert(out == '1);
-        // @(posedge clk); #5;
-
-        // read = 1;
-        // @(posedge clk); #5;
-        // read = 0;
-        // assert(empty);
-
-        // $display(" -- FIFO_SIZE Pre-defined Random Frames -- ");
-        // for (int j = 0; j < FIFO_SIZE; j++) begin
-        //     uart_rx = 0;  // start bit
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        //     // generate random bit and send
-        //     for (int i = 0; i < DATA_BITS; i++) begin
-        //         random_bits[j][i] = 1'($urandom()); 
-        //         uart_rx = random_bits[j][i];  // data bits
-        //         repeat(OVERSAMPLING) begin
-        //             @(posedge clk); #5;
-        //         end
-        //     end
-        //     uart_rx = 1;  // stop bit
-        //     $display("TX: %b", random_bits[j]);
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        // end
-
-        // for (int j = 0; j < FIFO_SIZE; j++) begin
-        //     assert(~empty);
-        //     $display("RX: %b", out);
-        //     assert(out == random_bits[j]);
-        //     read = 1;
-        //     @(posedge clk); #5;
-        // end
-        // read = 0;
-        // assert(empty);
-
-        // $display(" -- FIFO_SIZE*2 Pre-defined Random Frames -- ");
-        // $display("Should drop frames after FIFO_SIZE");
-        // for (int j = 0; j < FIFO_SIZE; j++) begin
-        //     uart_rx = 0;  // start bit
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        //     // generate random bit and send
-        //     for (int i = 0; i < DATA_BITS; i++) begin
-        //         random_bits[j][i] = 1'($urandom()); 
-        //         uart_rx = random_bits[j][i];  // data bits
-        //         repeat(OVERSAMPLING) begin
-        //             @(posedge clk); #5;
-        //         end
-        //     end
-        //     uart_rx = 1;  // stop bit
-        //     $display("TX: %b", random_bits[j]);
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        // end
-        // // these should be dropped
-        // for (int j = 0; j < FIFO_SIZE; j++) begin
-        //     uart_rx = 0;  // start bit
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        //     // generate random bit and send
-        //     for (int i = 0; i < DATA_BITS; i++) begin
-        //         dropped_bits[i] = 1'($urandom());
-        //         uart_rx = dropped_bits[i];  // data bits
-        //         repeat(OVERSAMPLING) begin
-        //             @(posedge clk); #5;
-        //         end
-        //     end
-        //     uart_rx = 1;  // stop bit
-        //     $display("Dropped: %b", dropped_bits);
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        // end
-
-        // for (int j = 0; j < FIFO_SIZE; j++) begin
-        //     assert(~empty);
-        //     $display("RX: %b", out);
-        //     assert(out == random_bits[j]);
-        //     read = 1;
-        //     @(posedge clk); #5;
-        // end
-        // read = 0;
-        // assert(empty);
+        $display(" -- Testing FIFO size -- ");
+        write = 1;
+        for (int j = 0; j < FIFO_SIZE+1; j++) begin
+            data = '1;
+            assert(~full);
+            @(posedge clk); #5;
+        end
+        write = 0;
+        assert(full);
+        @(negedge full);
 
         $finish;
     end  // initial

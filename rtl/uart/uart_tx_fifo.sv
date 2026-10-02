@@ -38,6 +38,7 @@ module uart_tx_fifo #(
     // FIFO
     logic [DATA_BITS-1:0] fifo_memory [0:FIFO_SIZE-1];
     logic empty;
+    logic read;
     logic [$clog2(FIFO_SIZE)-1:0] rd_ptr, wr_ptr;
     always_ff @(posedge clk) begin
         if (rst) begin
@@ -46,11 +47,11 @@ module uart_tx_fifo #(
             full <= 0;
             empty <= 1;
         end else begin
-            if (tx_ready & write) begin
+            if (read & write) begin
                 rd_ptr <= rd_ptr + 1;
                 wr_ptr <= wr_ptr + 1;
                 fifo_memory[wr_ptr] <= data;
-            end else if (~empty & tx_ready) begin
+            end else if (read) begin
                 rd_ptr <= rd_ptr + 1;
                 full <= 0;
                 if ((rd_ptr+1) == wr_ptr) begin
@@ -69,6 +70,7 @@ module uart_tx_fifo #(
     end  // always_ff
     
     assign to_send = fifo_memory[rd_ptr];
+    assign read = tx_ready & ~empty;
     // SUBMODULES
     frame_transmitter #(
         .CLOCK_SPEED(CLOCK_SPEED),
@@ -78,7 +80,7 @@ module uart_tx_fifo #(
     ) transmitter_m (
         .clk,
         .rst,
-        .send(~empty),
+        .send(read),
         .data(to_send),
 
         .ready(tx_ready),
