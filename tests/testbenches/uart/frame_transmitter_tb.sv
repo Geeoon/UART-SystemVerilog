@@ -71,7 +71,6 @@ module frame_transmitter_tb #(
         send = 0;
         // start bit
         repeat(OVERSAMPLING) begin
-            $display("%b", dut.counter);
             assert(~ready);
             assert(~uart_tx);
             @(posedge clk); #5;
@@ -79,7 +78,6 @@ module frame_transmitter_tb #(
         // data bits
         repeat(DATA_BITS) begin
             repeat(OVERSAMPLING) begin
-                $display("%b", dut.counter);
                 assert(~ready);
                 assert(~uart_tx);
                 @(posedge clk); #5;
@@ -88,18 +86,10 @@ module frame_transmitter_tb #(
         // stop bits
         repeat(STOP_BITS) begin
             repeat(OVERSAMPLING) begin
-                $display("%b", dut.counter);
                 assert(~ready);
                 assert(uart_tx);
                 @(posedge clk); #5;
             end
-        end
-
-        $display(" -- Testing idle state -- ");
-        repeat(100) begin
-            assert(ready);
-            assert(uart_tx);
-            @(posedge clk); #5;
         end
 
         $display(" -- Transmitting '1 Frame -- ");
@@ -109,7 +99,6 @@ module frame_transmitter_tb #(
         send = 0;
         // start bit
         repeat(OVERSAMPLING) begin
-            $display("%b, %b, %b", dut.counter, ready, uart_tx);
             assert(~ready);
             assert(~uart_tx);
             @(posedge clk); #5;
@@ -117,83 +106,61 @@ module frame_transmitter_tb #(
         // data bits
         repeat(DATA_BITS) begin
             repeat(OVERSAMPLING) begin
-                $display("%b", dut.counter);
                 assert(~ready);
                 assert(uart_tx);
                 @(posedge clk); #5;
             end
         end
         // stop bits
-        $display("stop bits!");
         repeat(STOP_BITS) begin
             repeat(OVERSAMPLING) begin
-                $display("%b", dut.counter);
                 assert(~ready);
                 assert(uart_tx);
                 @(posedge clk); #5;
             end
         end
+
+        $display(" -- Transmitting 10 Random Frames -- ");
+        repeat(10) begin
+            random_bits = (DATA_BITS)'($urandom());
+            data = random_bits;
+            $display("Sending: %b", data);
+            send = 1;
+            @(posedge clk); #5;
+            send = 0;
+
+            // start bit
+            repeat(OVERSAMPLING) begin
+                assert(~ready);
+                assert(~uart_tx);
+                @(posedge clk); #5;
+            end
+            // data bits
+            for (int i = 0; i < DATA_BITS; i++) begin
+                repeat(OVERSAMPLING) begin
+                    assert(~ready);
+                    assert(random_bits[i] == uart_tx);
+                    @(posedge clk); #5;
+                end
+            end
+            // stop bits
+            repeat(STOP_BITS) begin
+                repeat(OVERSAMPLING) begin
+                    assert(~ready);
+                    assert(uart_tx);
+                    @(posedge clk); #5;
+                end
+            end
+            assert(ready);
+        end
+        
+        $display(" -- Testing idle state -- ");
+        repeat(100) begin
+            assert(ready);
+            assert(uart_tx);
+            @(posedge clk); #5;
+        end
         $finish;
-        // $display(" -- Testing Pre-defined '0 Frame -- ");
-        // uart_rx = 0;  // start bit
-        // repeat(OVERSAMPLING) begin
-        //     @(posedge clk); #5;
-        // end
-        // uart_rx = 0;  // data bits
-        // repeat(DATA_BITS) begin
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        // end
-        // uart_rx = 1;  // stop bit
-        // @(posedge valid);
-        // assert(data == '0);
-        // @(posedge clk); #5;
-        // repeat(100) begin
-        //     assert(~valid);
-        //     @(posedge clk); #5;
-        // end
-
-        // $display(" -- Testing Pre-defined '1 Frame -- ");
-        // uart_rx = 0;  // start bit
-        // repeat(OVERSAMPLING) begin
-        //     @(posedge clk); #5;
-        // end
-        // uart_rx = 1;  // data bits
-        // repeat(DATA_BITS) begin
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        // end
-        // uart_rx = 1;  // stop bit
-        // @(posedge valid); #5;
-        // assert(data == '1);
-        // @(posedge clk); #5;
-        // repeat(100) begin
-        //     assert(~valid);
-        //     @(posedge clk); #5;
-        // end
-
-        // $display(" -- Testing Pre-defined Random Frames -- ");
-        // repeat(10) begin
-        //     uart_rx = 0;  // start bit
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        //     // generate random bit and send
-        //     for (int i = 0; i < DATA_BITS; i++) begin
-        //         random_bits[i] = 1'($urandom()); 
-        //         uart_rx = random_bits[i];  // data bits
-        //         repeat(OVERSAMPLING) begin
-        //             @(posedge clk); #5;
-        //         end
-        //     end
-        //     uart_rx = 1;  // stop bit
-        //     @(posedge valid); #5;
-        //     $display("TX: %b, RX: %b", data, random_bits);
-        //     assert(data == random_bits);
-        // end
-        // $finish;
     end  // initial
 
 endmodule  // frame_transmitter_tb

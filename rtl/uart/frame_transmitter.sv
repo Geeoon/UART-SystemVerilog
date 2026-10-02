@@ -57,7 +57,7 @@ module frame_transmitter #(
         .COUNT(CLOCKS_PER_SAMPLE-1)
     ) timer_m (
         .clk,
-        .rst(timer_done | send),
+        .rst(timer_done | ready),
         .done(timer_done)
     );
 endmodule  // frame_transmitter
