@@ -1,13 +1,11 @@
 /**
  * @file clock_divider.sv
  * @author Geeoon Chung
- * @brief a clock divider
- * @param MAIN_CLOCK_SPEED      the speed of the main clock
- * @param TARGET_CLOCK_SPEED    the target clock speed
+ * @brief a clock divider that outputs a clock enable signal
+ * @param MAIN_CLOCK_SPEED      the speed of the main clock, frequency
+ * @param TARGET_CLOCK_SPEED    the target clock speed, frequency (must be same units as \p MAIN_CLOCK_SPEED)
  * @param[in] clk               the main clock signal
- * @param[in] prev_not_out      the previous divider's not out signal. set to 1 if this is the top level
- * @param[out] out              the output clock signal
- * @param[out] not_out          the inverted output clock signal
+ * @param[out] out              the clock enable signal.  High for only 1 main clock cycle
  */
 module clock_divider #(
     parameter int MAIN_CLOCK_SPEED,
@@ -16,10 +14,9 @@ module clock_divider #(
     localparam DIVISOR=MAIN_CLOCK_SPEED/TARGET_CLOCK_SPEED
 )(
     input logic clk,
-    input logic prev_not_out,
-    
-    output logic out,
-    output logic not_out
+    input logic rst,
+
+    output logic out
 );
     if (MAIN_CLOCK_SPEED < TARGET_CLOCK_SPEED) begin
         $error("The clock divider cannot create a faster clock.");
@@ -29,21 +26,22 @@ module clock_divider #(
         $error("The clock divider is useless.  MAIN_CLOCK_SPEED == TARGET_CLOCK_SPEED.");
     end
 
-    if (DIVISOR == 2)
-        begin : DIVISOR_eq_2
-
-        end  // DIVISOR_eq_2
-    else
-        begin : DIVISOR_gt_2
-            clock_divider #(
-                .MAIN_CLOCK_SPEED(MAIN_CLOCK_SPEED / 2),
-                .TARGET_CLOCK_SPEED(TARGET_CLOCK_SPEED)
-            ) clock_divider_stage (
-                .clk,
-                .prev_not_out(),
-
-                .out,
-                .not_out
-            );
-        end  // DIVISOR_gt_2
-endmodule
+    // SUBMODULES
+    if (DIVISOR == 2) begin  // just use a flip flop
+        always_ff @(posedge clk) begin
+            if (rst) begin
+                out <= 0;
+            end else begin
+                out <= ~out;
+            end
+        end  // always_ff
+    end else begin  // use a timer to get a single cycle clock enable
+        lfsr_timer #(
+            .COUNT(DIVISOR - 1)
+        ) timer_m (
+            .clk,
+            .rst(rst | out),
+            .done(out)
+        );
+    end
+endmodule  // clock_divider
