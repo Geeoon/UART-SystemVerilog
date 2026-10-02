@@ -17,7 +17,7 @@ module uart_rx_fifo #(
     parameter int CLOCK_SPEED,  // in Hz
     parameter int BAUD_RATE=115200,
     parameter int DATA_BITS=8,
-    parameter int FIFO_SIZE=8,  // does not need to be large for RX
+    parameter int FIFO_SIZE=8,
     
     localparam int CLOCKS_PER_SAMPLE=CLOCK_SPEED/BAUD_RATE
 )(
@@ -29,13 +29,41 @@ module uart_rx_fifo #(
     output logic empty,
     output logic [DATA_BITS-1:0] out
 );
-    logic [$clog(DATA_BITS)-1:0] rd_ptr, wr_ptr;
+    // FIFO
+    logic [DATA_BITS-1:0] fifo_memory [0:FIFO_SIZE-1];
+    logic full;
+    logic [$clog2(FIFO_SIZE)-1:0] rd_ptr, wr_ptr;
     always_ff @(posedge clk) begin
         if (rst) begin
             rd_ptr <= 0;
             wr_ptr <= 0;
+            full <= 0;
+            empty <= 1;
+        end else begin
+            if (read & detector_valid) begin
+                rd_ptr <= rd_ptr + 1;
+                wr_ptr <= wr_ptr + 1;
+            end else if (read) begin
+                // no bounds checking
+                // user should check if its empty before
+                rd_ptr <= rd_ptr + 1;
+                full <= 0;
+                if (rd_ptr == wr_ptr) begin
+                    empty <= 1;
+                end
+            end else if (detector_valid & ~full) begin
+                // basic bounds checking
+                // drop detected frames if full
+                fifo_memory[wr_ptr] <= detector_data;
+                wr_ptr <= wr_ptr + 1;
+                empty <= 0;
+                if (rd_ptr == wr_ptr) begin
+                    full <= 1;
+                end
+            end
         end
     end  // always_ff
+    assign out = fifo_memory[rd_ptr];
 
     // intermediate signals
     logic detector_valid;
