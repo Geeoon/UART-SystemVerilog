@@ -7,6 +7,7 @@
  * @param BAUD_RATE         the UART baud rate
  * @param DATA_BITS         the defined number of data bits per UART frame
  * @param FIFO_SIZE         the size of the FIFO in words, must be a power of 2
+ * @param STOP_BITS         the number of stop bits per UART frame
  * @param[in] clk           the clock driving the sequential logic
  * @param[in] rst           reset signal
  * @param[in] write         active HIGH signal to add a new element to the FIFO
@@ -48,21 +49,21 @@ module uart_tx_fifo #(
             empty <= 1;
         end else begin
             if (read & write) begin
-                rd_ptr <= rd_ptr + 1;
-                wr_ptr <= wr_ptr + 1;
+                rd_ptr <= rd_ptr + ($clog2(FIFO_SIZE))'(1);
+                wr_ptr <= wr_ptr + ($clog2(FIFO_SIZE))'(1);
                 fifo_memory[wr_ptr] <= data;
             end else if (read) begin
-                rd_ptr <= rd_ptr + 1;
+                rd_ptr <= rd_ptr + ($clog2(FIFO_SIZE))'(1);
                 full <= 0;
-                if ((rd_ptr+1) == wr_ptr) begin
+                if ((rd_ptr+($clog2(FIFO_SIZE))'(1)) == wr_ptr) begin
                     empty <= 1;
                 end
             end else if (write) begin
                 // no bounds checking
                 fifo_memory[wr_ptr] <= data;
-                wr_ptr <= wr_ptr + 1;
+                wr_ptr <= wr_ptr + ($clog2(FIFO_SIZE))'(1);
                 empty <= 0;
-                if (rd_ptr == (wr_ptr+1)) begin
+                if (rd_ptr == (wr_ptr+($clog2(FIFO_SIZE))'(1))) begin
                     full <= 1;
                 end
             end

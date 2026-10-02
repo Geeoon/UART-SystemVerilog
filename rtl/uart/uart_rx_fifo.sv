@@ -41,24 +41,24 @@ module uart_rx_fifo #(
             empty <= 1;
         end else begin
             if (read & detector_valid) begin
-                rd_ptr <= rd_ptr + 1;
-                wr_ptr <= wr_ptr + 1;
+                rd_ptr <= rd_ptr + ($clog2(FIFO_SIZE))'(1);
+                wr_ptr <= wr_ptr + ($clog2(FIFO_SIZE))'(1);
                 fifo_memory[wr_ptr] <= detector_data;
             end else if (read) begin
                 // no bounds checking
                 // user should check if its empty before
-                rd_ptr <= rd_ptr + 1;
+                rd_ptr <= rd_ptr + ($clog2(FIFO_SIZE))'(1);
                 full <= 0;
-                if ((rd_ptr+1) == wr_ptr) begin
+                if (((rd_ptr+($clog2(FIFO_SIZE))'(1))) == wr_ptr) begin
                     empty <= 1;
                 end
             end else if (detector_valid & ~full) begin
                 // basic bounds checking
                 // drop detected frames if full
                 fifo_memory[wr_ptr] <= detector_data;
-                wr_ptr <= wr_ptr + 1;
+                wr_ptr <= wr_ptr + ($clog2(FIFO_SIZE))'(1);
                 empty <= 0;
-                if (rd_ptr == (wr_ptr+1)) begin
+                if (rd_ptr == (wr_ptr+($clog2(FIFO_SIZE))'(1))) begin
                     full <= 1;
                 end
             end

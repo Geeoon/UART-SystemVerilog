@@ -48,8 +48,6 @@ module uart_tx_fifo_tb #(
         end  // forever
     end  // initial
 
-    bit [DATA_BITS-1:0] random_bits [0:7];
-    bit [DATA_BITS-1:0] dropped_bits;
     initial begin
         $urandom('hCAFEBABE);
         $dumpfile("waveforms/uart_tx_fifo_tb.vcd");
