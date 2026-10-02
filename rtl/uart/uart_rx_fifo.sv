@@ -43,6 +43,7 @@ module uart_rx_fifo #(
             if (read & detector_valid) begin
                 rd_ptr <= rd_ptr + 1;
                 wr_ptr <= wr_ptr + 1;
+                fifo_memory[wr_ptr] <= detector_data;
             end else if (read) begin
                 // no bounds checking
                 // user should check if its empty before
