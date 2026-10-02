@@ -48,7 +48,7 @@ module uart_rx_fifo #(
                 // user should check if its empty before
                 rd_ptr <= rd_ptr + 1;
                 full <= 0;
-                if (rd_ptr == wr_ptr) begin
+                if ((rd_ptr+1) == wr_ptr) begin
                     empty <= 1;
                 end
             end else if (detector_valid & ~full) begin
@@ -57,7 +57,7 @@ module uart_rx_fifo #(
                 fifo_memory[wr_ptr] <= detector_data;
                 wr_ptr <= wr_ptr + 1;
                 empty <= 0;
-                if (rd_ptr == wr_ptr) begin
+                if (rd_ptr == (wr_ptr+1)) begin
                     full <= 1;
                 end
             end

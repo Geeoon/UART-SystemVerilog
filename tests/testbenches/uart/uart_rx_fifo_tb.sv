@@ -8,6 +8,7 @@ module uart_rx_fifo_tb #(
     parameter int CLOCK_PERIOD=100,
     parameter int BAUD_RATE=115200,
     parameter int DATA_BITS=8,
+    parameter int FIFO_SIZE=8,
 
     localparam int OVERSAMPLING=6
 ) ();
@@ -24,7 +25,8 @@ module uart_rx_fifo_tb #(
     uart_rx_fifo #(
         .CLOCK_SPEED(BAUD_RATE*OVERSAMPLING),
         .BAUD_RATE(BAUD_RATE),
-        .DATA_BITS(DATA_BITS)
+        .DATA_BITS(DATA_BITS),
+        .FIFO_SIZE(FIFO_SIZE)
     ) dut (
         .clk,
         .rst,
@@ -44,7 +46,8 @@ module uart_rx_fifo_tb #(
         end  // forever
     end  // initial
 
-    bit [DATA_BITS-1:0] random_bits;
+    bit [DATA_BITS-1:0] random_bits [0:7];
+    bit [DATA_BITS-1:0] dropped_bits;
     initial begin
         $urandom('hCAFEBABE);
         $dumpfile("waveforms/uart_rx_fifo_tb.vcd");
@@ -72,53 +75,124 @@ module uart_rx_fifo_tb #(
             end
         end
         uart_rx = 1;  // stop bit
-        @(posedge clk); #5;
-        repeat(100) begin
-            assert(~empty);
+
+        // frame added to FIFO
+        @(negedge empty); #5;
+        assert(out == 0);
+
+        // read from FIFO
+        read = 1;
+        @(posedge clk) #5;
+        read = 0;
+        assert(empty);
+
+        $display(" -- Sinlge Pre-defined '1 Frame -- ");
+        uart_rx = 0;  // start bit
+        repeat(OVERSAMPLING) begin
             @(posedge clk); #5;
         end
+        uart_rx = 1;  // data bits
+        repeat(DATA_BITS) begin
+            repeat(OVERSAMPLING) begin
+                @(posedge clk); #5;
+            end
+        end
+        uart_rx = 1;  // stop bit
+
+        // frame added to FIFO
+        @(negedge empty); #5;
+        assert(out == '1);
+        @(posedge clk); #5;
+
+        read = 1;
+        @(posedge clk); #5;
+        read = 0;
+        assert(empty);
+
+        $display(" -- FIFO_SIZE Pre-defined Random Frames -- ");
+        for (int j = 0; j < FIFO_SIZE; j++) begin
+            uart_rx = 0;  // start bit
+            repeat(OVERSAMPLING) begin
+                @(posedge clk); #5;
+            end
+            // generate random bit and send
+            for (int i = 0; i < DATA_BITS; i++) begin
+                random_bits[j][i] = 1'($urandom()); 
+                uart_rx = random_bits[j][i];  // data bits
+                repeat(OVERSAMPLING) begin
+                    @(posedge clk); #5;
+                end
+            end
+            uart_rx = 1;  // stop bit
+            $display("TX: %b", random_bits[j]);
+            repeat(OVERSAMPLING) begin
+                @(posedge clk); #5;
+            end
+        end
+
+        for (int j = 0; j < FIFO_SIZE; j++) begin
+            assert(~empty);
+            $display("RX: %b", out);
+            assert(out == random_bits[j]);
+            read = 1;
+            @(posedge clk); #5;
+        end
+        read = 0;
+        assert(empty);
+
+        $display(" -- FIFO_SIZE*2 Pre-defined Random Frames -- ");
+        $display("Should drop frames after FIFO_SIZE");
+        for (int j = 0; j < FIFO_SIZE; j++) begin
+            uart_rx = 0;  // start bit
+            repeat(OVERSAMPLING) begin
+                @(posedge clk); #5;
+            end
+            // generate random bit and send
+            for (int i = 0; i < DATA_BITS; i++) begin
+                random_bits[j][i] = 1'($urandom()); 
+                uart_rx = random_bits[j][i];  // data bits
+                repeat(OVERSAMPLING) begin
+                    @(posedge clk); #5;
+                end
+            end
+            uart_rx = 1;  // stop bit
+            $display("TX: %b", random_bits[j]);
+            repeat(OVERSAMPLING) begin
+                @(posedge clk); #5;
+            end
+        end
+        // these should be dropped
+        for (int j = 0; j < FIFO_SIZE; j++) begin
+            uart_rx = 0;  // start bit
+            repeat(OVERSAMPLING) begin
+                @(posedge clk); #5;
+            end
+            // generate random bit and send
+            for (int i = 0; i < DATA_BITS; i++) begin
+                dropped_bits[i] = 1'($urandom());
+                uart_rx = dropped_bits[i];  // data bits
+                repeat(OVERSAMPLING) begin
+                    @(posedge clk); #5;
+                end
+            end
+            uart_rx = 1;  // stop bit
+            $display("Dropped: %b", dropped_bits);
+            repeat(OVERSAMPLING) begin
+                @(posedge clk); #5;
+            end
+        end
+
+        for (int j = 0; j < FIFO_SIZE; j++) begin
+            assert(~empty);
+            $display("RX: %b", out);
+            assert(out == random_bits[j]);
+            read = 1;
+            @(posedge clk); #5;
+        end
+        read = 0;
+        assert(empty);
+
         $finish;
-
-        // $display(" -- Testing Pre-defined '1 Frame -- ");
-        // uart_rx = 0;  // start bit
-        // repeat(OVERSAMPLING) begin
-        //     @(posedge clk); #5;
-        // end
-        // uart_rx = 1;  // data bits
-        // repeat(DATA_BITS) begin
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        // end
-        // uart_rx = 1;  // stop bit
-        // @(posedge valid); #5;
-        // assert(data == '1);
-        // @(posedge clk); #5;
-        // repeat(100) begin
-        //     assert(~valid);
-        //     @(posedge clk); #5;
-        // end
-
-        // $display(" -- Testing Pre-defined Random Frames -- ");
-        // repeat(10) begin
-        //     uart_rx = 0;  // start bit
-        //     repeat(OVERSAMPLING) begin
-        //         @(posedge clk); #5;
-        //     end
-        //     // generate random bit and send
-        //     for (int i = 0; i < DATA_BITS; i++) begin
-        //         random_bits[i] = 1'($urandom()); 
-        //         uart_rx = random_bits[i];  // data bits
-        //         repeat(OVERSAMPLING) begin
-        //             @(posedge clk); #5;
-        //         end
-        //     end
-        //     uart_rx = 1;  // stop bit
-        //     @(posedge valid); #5;
-        //     $display("TX: %b, RX: %b", data, random_bits);
-        //     assert(data == random_bits);
-        // end
-        // $finish;
     end  // initial
 
 endmodule  // uart_rx_fifo_tb
