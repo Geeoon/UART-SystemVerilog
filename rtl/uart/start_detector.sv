@@ -12,8 +12,7 @@ module start_detector #(
     parameter int CLOCK_SPEED,  // in Hz
     parameter int BAUD_RATE=115200,
     
-    localparam int CLOCKS_PER_SAMPLE=CLOCK_SPEED/(BAUD_RATE*2),
-    localparam int HISTORY_LENGTH=$clog2(OVERSAMPLING_RATE)
+    localparam int CLOCKS_PER_SAMPLE=CLOCK_SPEED/(BAUD_RATE*2)
 )(
     input logic clk,
     input logic val,

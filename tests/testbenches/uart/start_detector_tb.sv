@@ -5,7 +5,6 @@
  */
 module start_detector_tb #(
     parameter int CLOCK_PERIOD=100,
-    parameter int OVERSAMPLING_RATE=16,
     parameter int BAUD_RATE=115200
 ) ();
     // inputs
@@ -17,7 +16,6 @@ module start_detector_tb #(
 
     start_detector #(
         .CLOCK_SPEED(230400*3),
-        .OVERSAMPLING_RATE(OVERSAMPLING_RATE),
         .BAUD_RATE(BAUD_RATE)
     ) dut (
         .clk,
