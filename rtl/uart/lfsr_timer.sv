@@ -2,7 +2,7 @@
  * @file lfsr_timer.sv
  * @author Geeoon Chung
  * @brief An LFSR-based timer
- * @see https://github.com/Geeoon/Cross-Correlation-SystemVerilog/blob/main/rtl/cross_correlator/lfsr_timer.sv
+ * @see https://www.physics.otago.ac.nz/reports/electronics/ETR2012-1.pdf
  * @param COUNT         the number of clock cycles to count
  * @param[in] clk       the clock driving the sequential logic
  * @param[in] rst       an active high reset
@@ -18,10 +18,15 @@ module lfsr_timer #(
 
     output logic done
 );
+    if (COUNT < 1) begin
+        $error("COUNT needs to be at least 1.");
+    end
     /* verilator lint_off SELRANGE */
+    /* verilator lint_off WIDTHTRUNC */
     function automatic logic [N-1:0] get_next_state(logic [N-1:0] current_state);
         logic feedback;
         unique case (N)
+            1: return '1;
             2: feedback = current_state[1] ^ current_state[0];
             3: feedback = current_state[2] ^ current_state[1];
             4: feedback = current_state[3] ^ current_state[2];
@@ -57,29 +62,30 @@ module lfsr_timer #(
         endcase  // N
         return { current_state[N-2:0], feedback };
     endfunction  // get_next_state
+    /* verilator lint_on WIDTHTRUNC */
     /* verilator lint_on SELRANGE */
 
-    function automatic logic [N-1:0] calculate_end();
+    function automatic logic [N-1:0] calculate_start();
         logic [N-1:0] temp = '1;
         int steps = (2**N) - (COUNT);
         for (int i = 0; i < steps; i++) begin
             temp = get_next_state(temp);
         end  // for
         return temp;
-    endfunction  // calculate_end
+    endfunction  // calculate_start
 
     logic [N-1:0] lfsr_state;
 
     always_ff @(posedge clk) begin
         if (rst) begin
             done <= 0;
-            lfsr_state <= (N)'(calculate_end());
+            lfsr_state <= (N)'(calculate_start());
         end else begin
             lfsr_state <= get_next_state(lfsr_state);
+            if (lfsr_state == '1) begin
+                done <= 1;
+            end
         end
 
-        if (lfsr_state == '1) begin
-            done <= 1;
-        end
     end  // always_ff
 endmodule  // lfsr_timer
